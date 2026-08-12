@@ -1,5 +1,5 @@
 [Unit]
-Description=Tailscale userspace node agent
+Description=Tailscale node agent
 Documentation=https://tailscale.com/docs/
 
 [Service]
