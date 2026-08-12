@@ -1,0 +1,6 @@
+#!/bin/sh
+
+runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+exec "$HOME/.local/share/tailscale/tailscale" \
+    --socket="$runtime_dir/tailscale/tailscaled.sock" \
+    "$@"
