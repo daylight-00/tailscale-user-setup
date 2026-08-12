@@ -228,10 +228,12 @@ check_path() {
 check_linger() {
     LINGER_HINT=0
 
-    command -v loginctl >/dev/null 2>&1 || return
+    command -v loginctl >/dev/null 2>&1 || return 0
 
     linger=$(loginctl show-user "$(id -un)" -p Linger --value 2>/dev/null || true)
-    [ "$linger" = no ] && LINGER_HINT=1
+    if [ "$linger" = no ]; then
+        LINGER_HINT=1
+    fi
 }
 
 usage() {
@@ -312,26 +314,19 @@ main() {
     trap - 0 HUP INT TERM
 
     say ""
-    say "Tailscale $VERSION installed with Tailscale User Setup."
-    say ""
-    say "  binaries  $DATA_DIR"
-    say "  commands  $BIN_DIR"
-    say "  state     $STATE_DIR"
-    say "  config    $CONFIG_DIR"
-    say ""
 
     if [ "$PATH_READY" = 1 ]; then
-        say "Log in to Tailscale by running:"
+        say "Installation complete! Log in to start using Tailscale by running:"
         say ""
-        say "  tailscale up"
+        say "tailscale up"
     else
-        say "Add $BIN_DIR to PATH, then run:"
+        say "Installation complete!"
         say ""
-        say "  tailscale up"
+        say "$BIN_DIR is not on PATH."
         say ""
-        say "Or run it now with:"
+        say "Add it to PATH, or run:"
         say ""
-        say "  $BIN_DIR/tailscale up"
+        say "$BIN_DIR/tailscale up"
     fi
 
     if [ "$LINGER_HINT" = 1 ]; then
