@@ -14,7 +14,7 @@ You need:
 - `curl` or `wget`
 - `tar` and `sha256sum`
 
-`~/.local/bin` should be on your `PATH` to use the `tailscale` and `tailscaled` commands normally. If it is not, the installer will tell you how to add it.
+`~/.local/bin` should be on your `PATH` to use the `tailscale` and `tailscaled` commands normally. If it is not, the installer prints a warning.
 
 Tailscale User Setup stores the node identity under your home directory. Do not use the same home directory as the active Tailscale state for multiple hosts. Shared-home and roaming-home setups are not supported.
 

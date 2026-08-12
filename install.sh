@@ -207,21 +207,16 @@ install_setup_files() {
 }
 
 check_path() {
-    PATH_READY=0
-
     resolved=$(command -v tailscale 2>/dev/null || true)
-    if [ "$resolved" = "$BIN_DIR/tailscale" ]; then
-        PATH_READY=1
-        return
-    fi
+    [ "$resolved" = "$BIN_DIR/tailscale" ] && return
 
     case ":${PATH:-}:" in
         *:"$BIN_DIR":*) ;;
-        *) warn "$BIN_DIR is not on PATH" ;;
+        *) warn "~/.local/bin is not on PATH; add it before using tailscale" ;;
     esac
 
     if [ -n "$resolved" ]; then
-        warn "tailscale currently resolves to $resolved instead of $BIN_DIR/tailscale"
+        warn "tailscale currently resolves to $resolved instead of ~/.local/bin/tailscale"
     fi
 }
 
@@ -302,7 +297,7 @@ main() {
     install_setup_files
 
     systemctl --user daemon-reload
-    systemctl --user enable tailscaled.service >/dev/null
+    systemctl --user enable --quiet tailscaled.service
     systemctl --user restart tailscaled.service ||
         die "tailscaled.service failed; inspect it with: journalctl --user -u tailscaled.service"
 
@@ -313,28 +308,15 @@ main() {
     TMP_DIR=""
     trap - 0 HUP INT TERM
 
-    say ""
-
-    if [ "$PATH_READY" = 1 ]; then
-        say "Installation complete! Log in to start using Tailscale by running:"
-        say ""
-        say "tailscale up"
-    else
-        say "Installation complete!"
-        say ""
-        say "$BIN_DIR is not on PATH."
-        say ""
-        say "Add it to PATH, or run:"
-        say ""
-        say "$BIN_DIR/tailscale up"
-    fi
-
     if [ "$LINGER_HINT" = 1 ]; then
         say ""
-        say "To keep the service running after logout, optionally run:"
-        say ""
-        say '  loginctl enable-linger "$USER"'
+        say 'Tip: run `loginctl enable-linger "$USER"` to keep Tailscale running after logout.'
     fi
+
+    say ""
+    say "Installation complete! Log in to start using Tailscale by running:"
+    say ""
+    say "tailscale up"
 }
 
 # Keep execution at the bottom so a truncated curl | sh download cannot execute
