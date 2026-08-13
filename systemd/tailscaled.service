@@ -15,6 +15,7 @@ ExecStart=%h/.local/share/tailscale/tailscaled \
 
 ExecStopPost=%h/.local/share/tailscale/tailscaled \
     --cleanup \
+    --tun=userspace-networking \
     --socket=%t/tailscale/tailscaled.sock
 
 Restart=on-failure
