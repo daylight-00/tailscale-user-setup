@@ -1,6 +1,16 @@
 name: Upstream
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/upstream.yml
+      - .github/tailscale-upstream-ref
+  pull_request:
+    paths:
+      - .github/workflows/upstream.yml
+      - .github/tailscale-upstream-ref
   schedule:
     - cron: "17 3 * * 1"
   workflow_dispatch:
