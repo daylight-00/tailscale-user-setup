@@ -16,7 +16,7 @@ You need:
 
 `~/.local/bin` should be on your `PATH` to use the `tailscale` and `tailscaled` commands normally. If it is not, the installer prints a warning.
 
-Tailscale User Setup stores the node identity under your home directory. Do not use the same home directory as the active Tailscale state for multiple hosts. Shared-home and roaming-home setups are not supported.
+Tailscale User Setup stores the node identity under your home directory. The default state directory must be used by only one host at a time. For controlled environments where the home directory is shared across hosts, see [Use a shared home directory](#use-a-shared-home-directory).
 
 ## Install with the script
 
@@ -58,6 +58,12 @@ curl -fsSL https://raw.githubusercontent.com/daylight-00/tailscale-user-setup/ma
 
 Unstable Tailscale builds are intended for testing. Refer to [Install unstable Tailscale clients](https://tailscale.com/docs/install/unstable) for information about the upstream unstable track.
 
+## Use alongside a system installation
+
+Tailscale User Setup can run alongside a conventional system-wide Tailscale installation on the same host.
+
+The system and user daemons use separate persistent state, LocalAPI sockets, and service managers, so they operate as independent Tailscale node instances. When both installations are present, command resolution follows `PATH`; `~/.local/bin/tailscale` targets the per-user daemon.
+
 ## Verify the installation
 
 Check that the user service is running:
@@ -91,6 +97,39 @@ loginctl enable-linger "$USER"
 Whether an unprivileged user can enable lingering depends on the system policy. If the command is not permitted, ask the system administrator to enable lingering for your account.
 
 This setting affects the lifetime of your entire systemd user manager, not only Tailscale.
+
+## Use a shared home directory
+
+Controlled multi-host environments such as HPC systems can keep the installed binaries and configuration in a shared home directory while giving each host its own Tailscale state.
+
+Each participating host must have a unique, stable hostname and must be able to use the same installed binaries and configuration.
+
+Edit:
+
+```text
+~/.config/systemd/user/tailscaled.service
+```
+
+Append `/%H` to both state paths:
+
+```ini
+Environment=TS_LOGS_DIR=%h/.local/state/tailscale/%H
+```
+
+```text
+--statedir=%h/.local/state/tailscale/%H
+```
+
+Then reload and restart the user service:
+
+```sh
+systemctl --user daemon-reload
+systemctl --user restart tailscaled.service
+```
+
+systemd expands `%H` to the current hostname, so each host uses a separate state directory under `~/.local/state/tailscale/`. The runtime socket is already host-local through the systemd user runtime directory.
+
+The installer replaces `tailscaled.service` when it is run. Reapply this change after installing or updating Tailscale User Setup.
 
 ## Configure a SOCKS5 proxy
 

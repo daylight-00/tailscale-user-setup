@@ -48,11 +48,19 @@ rmdir "$HOME/.config/tailscale" 2>/dev/null || true
 
 The node state contains the local Tailscale identity and other persistent daemon data. Keep it if you expect to reinstall Tailscale User Setup and want to preserve the same local node identity.
 
-To completely remove the local state:
+For the default setup, remove the local state with:
 
 ```sh
 rm -rf "$HOME/.local/state/tailscale"
 ```
+
+If you configured host-specific state for a shared home directory, remove only the current host's state:
+
+```sh
+rm -rf "$HOME/.local/state/tailscale/$(hostname)"
+```
+
+Do not remove the parent `~/.local/state/tailscale` directory in a shared-home setup unless you intend to delete the Tailscale state for every host stored there.
 
 Removing the local state is destructive. A later installation will initialize new local state and can appear as a new device in your tailnet.
 

@@ -139,6 +139,12 @@ The user service does not copy the system service's dependencies on system netwo
 
 `tailscaled` can start before network connectivity is available and observe network changes as connectivity appears. Services that specifically require an online Tailscale node can depend on `tailscale-online.target` instead.
 
+### Coexistence with a system installation
+
+A system-wide Tailscale daemon and a Tailscale User Setup daemon can run on the same host. They use separate persistent state, LocalAPI sockets, and service managers, so they are independent Tailscale node instances.
+
+The per-user `tailscale` wrapper always targets the user daemon. If both installations provide a `tailscale` command, the shell selects the command according to `PATH`.
+
 ## Tailscale online target
 
 Tailscale User Setup includes the same readiness model used by upstream Tailscale systemd integration:
@@ -212,9 +218,11 @@ The daemon belongs to the systemd user manager rather than the system manager. O
 
 See [Keep Tailscale running after logout](install.md#keep-tailscale-running-after-logout).
 
-### One node identity per home directory
+### Shared home directories
 
-Persistent Tailscale state belongs to the user setup under `~/.local/state/tailscale`. A single active state directory must not be shared between multiple hosts. This project does not define a shared-home or roaming-home state model.
+The default state directory, `~/.local/state/tailscale`, represents one Tailscale node and must not be used concurrently by multiple hosts.
+
+For controlled shared-home environments such as HPC systems, the state directory can include systemd's `%H` hostname specifier so each host keeps an independent node identity while the binaries and configuration remain shared. See [Use a shared home directory](install.md#use-a-shared-home-directory).
 
 ## Design principles
 

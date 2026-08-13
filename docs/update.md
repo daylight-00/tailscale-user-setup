@@ -74,6 +74,8 @@ It also preserves the daemon state under:
 
 As a result, updating the setup does not intentionally create a new Tailscale node identity.
 
+If you use host-specific state for a shared home directory, reapply the [shared-home service configuration](install.md#use-a-shared-home-directory) after running the installer because it replaces `tailscaled.service`.
+
 ## About `tailscale update`
 
 Tailscale User Setup uses its own installer as the supported update path. Use the commands in this document instead of relying on `tailscale update` to manage this per-user filesystem layout and systemd user service.
