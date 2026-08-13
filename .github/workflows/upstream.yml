@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Check Tailscale package contract
         run: |
@@ -73,7 +73,7 @@ jobs:
           test -x "$extract/tailscaled"
 
           help=$("$extract/tailscaled" --help 2>&1 || true)
-          for flag in cleanup port socket statedir tun; do
+          for flag in cleanup port socket socks5-server statedir tun; do
             printf '%s\n' "$help" |
               grep -Eq "^[[:space:]]*-${flag}([[:space:]=]|$)" || {
                 printf 'tailscaled flag not found: --%s\n' "$flag" >&2
@@ -81,6 +81,7 @@ jobs:
               }
           done
 
+          "$extract/tailscale" --socket="$work/tailscaled.sock" --help >/dev/null 2>&1
           "$extract/tailscale" wait --help >/dev/null 2>&1
 
       - name: Check upstream systemd references
