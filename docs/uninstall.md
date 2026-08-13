@@ -2,6 +2,8 @@
 
 You can remove the Tailscale User Setup files without deleting the local Tailscale node state. Remove the state separately if you want to completely reset the local node identity.
 
+In a shared-home setup, the installed binaries, configuration, and systemd units are shared by the participating hosts. Stop and disable the user service on each host before removing the shared installation; deleting those shared files removes the installation for every host using that home directory.
+
 ## Stop and disable Tailscale
 
 Stop the per-user daemon and disable it from the systemd user manager:
@@ -9,6 +11,8 @@ Stop the per-user daemon and disable it from the systemd user manager:
 ```sh
 systemctl --user disable --now tailscaled.service
 ```
+
+For a shared-home setup, run this command on each participating host before continuing.
 
 ## Remove the systemd user units
 
@@ -19,6 +23,13 @@ rm -f \
   "$HOME/.config/systemd/user/tailscale-online.target"
 
 systemctl --user daemon-reload
+```
+
+If you configured a shared home directory, also remove its drop-in after all participating hosts are stopped:
+
+```sh
+rm -f "$HOME/.config/systemd/user/tailscaled.service.d/shared-home.conf"
+rmdir "$HOME/.config/systemd/user/tailscaled.service.d" 2>/dev/null || true
 ```
 
 ## Remove the commands and Tailscale binaries

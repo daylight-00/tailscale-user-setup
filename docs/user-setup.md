@@ -133,6 +133,8 @@ The runtime directory is created by systemd for the user service and is removed 
 
 The service uses `Type=notify`, `Restart=on-failure`, and `WantedBy=default.target`, mirroring the relevant lifecycle behavior of a normal long-running Tailscale service within the user manager.
 
+The stop cleanup runs with the same `--tun=userspace-networking` backend as the service itself, so it does not attempt cleanup for a kernel Tailscale interface.
+
 ### Network ordering
 
 The user service does not copy the system service's dependencies on system network-management units. A systemd user manager cannot usefully order its service against system-manager units such as NetworkManager in the same way a system service can.
@@ -222,7 +224,11 @@ See [Keep Tailscale running after logout](install.md#keep-tailscale-running-afte
 
 The default state directory, `~/.local/state/tailscale`, represents one Tailscale node and must not be used concurrently by multiple hosts.
 
-For controlled shared-home environments such as HPC systems, the state directory can include systemd's `%H` hostname specifier so each host keeps an independent node identity while the binaries and configuration remain shared. See [Use a shared home directory](install.md#use-a-shared-home-directory).
+For controlled shared-home environments such as HPC systems, a systemd drop-in can make both the daemon state and log-policy directory host-specific with the `%H` hostname specifier. The binaries, configuration, and base systemd units remain shared, while each host keeps an independent node identity and runtime socket.
+
+The installer manages the base service file but does not replace service drop-ins, so host-specific state remains configured across updates. Because the binary payload is shared, each active host should reload and restart its user service after the shared installation is updated.
+
+See [Use a shared home directory](install.md#use-a-shared-home-directory).
 
 ## Design principles
 

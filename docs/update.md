@@ -74,7 +74,12 @@ It also preserves the daemon state under:
 
 As a result, updating the setup does not intentionally create a new Tailscale node identity.
 
-If you use host-specific state for a shared home directory, reapply the [shared-home service configuration](install.md#use-a-shared-home-directory) after running the installer because it replaces `tailscaled.service`.
+If you use the [shared-home configuration](install.md#use-a-shared-home-directory), the installer preserves its systemd drop-in. The binaries and base units are shared across the participating hosts, but the installer restarts only the host where it runs. Reload and restart the user service on each other active host after an update:
+
+```sh
+systemctl --user daemon-reload
+systemctl --user restart tailscaled.service
+```
 
 ## About `tailscale update`
 

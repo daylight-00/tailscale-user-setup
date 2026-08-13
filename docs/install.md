@@ -104,23 +104,34 @@ Controlled multi-host environments such as HPC systems can keep the installed bi
 
 Each participating host must have a unique, stable hostname and must be able to use the same installed binaries and configuration.
 
-Edit:
+Create a systemd drop-in before running the installer on a shared home:
 
-```text
-~/.config/systemd/user/tailscaled.service
-```
-
-Append `/%H` to both state paths:
-
-```ini
+```sh
+mkdir -p "$HOME/.config/systemd/user/tailscaled.service.d"
+cat > "$HOME/.config/systemd/user/tailscaled.service.d/shared-home.conf" <<'EOF'
+[Service]
 Environment=TS_LOGS_DIR=%h/.local/state/tailscale/%H
+
+ExecStart=
+ExecStart=%h/.local/share/tailscale/tailscaled \
+    --tun=userspace-networking \
+    --statedir=%h/.local/state/tailscale/%H \
+    --socket=%t/tailscale/tailscaled.sock \
+    --port=${PORT} \
+    $FLAGS
+EOF
 ```
 
-```text
---statedir=%h/.local/state/tailscale/%H
+Create the state directory for the current host:
+
+```sh
+mkdir -p "$HOME/.local/state/tailscale/$(hostname)"
+chmod 0700 \
+  "$HOME/.local/state/tailscale" \
+  "$HOME/.local/state/tailscale/$(hostname)"
 ```
 
-Then reload and restart the user service:
+For a new setup, run the installer after creating the drop-in. For an existing setup, reload and restart the user service:
 
 ```sh
 systemctl --user daemon-reload
@@ -129,7 +140,7 @@ systemctl --user restart tailscaled.service
 
 systemd expands `%H` to the current hostname, so each host uses a separate state directory under `~/.local/state/tailscale/`. The runtime socket is already host-local through the systemd user runtime directory.
 
-The installer replaces `tailscaled.service` when it is run. Reapply this change after installing or updating Tailscale User Setup.
+The installer manages the base `tailscaled.service` file but leaves service drop-ins in place, so the shared-home configuration persists across updates. The installed binaries, configuration, and base units remain shared; after updating them, reload and restart the user service on each active host.
 
 ## Configure a SOCKS5 proxy
 
