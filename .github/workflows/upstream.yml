@@ -30,59 +30,67 @@ jobs:
         run: |
           set -eu
 
-          pkgs_base="https://pkgs.tailscale.com/stable"
-          work="$RUNNER_TEMP/tailscale-package"
-          mkdir -p "$work"
+          check_track() {
+            track=$1
+            pkgs_base="https://pkgs.tailscale.com/$track"
+            work="$RUNNER_TEMP/tailscale-package-$track"
+            mkdir -p "$work"
 
-          latest_json="$work/latest.json"
-          curl -fsSL "$pkgs_base/?mode=json&os=linux" -o "$latest_json"
+            printf 'Checking %s package track...\n' "$track"
 
-          version=$(
-            tr -d '\n\r' < "$latest_json" |
-              sed -n 's/.*"TarballsVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
-          )
-          [ -n "$version" ]
+            latest_json="$work/latest.json"
+            curl -fsSL "$pkgs_base/?mode=json&os=linux" -o "$latest_json"
 
-          for arch in 386 amd64 arm arm64 mips mipsle mips64 mips64le riscv64; do
-            expected="tailscale_${version}_${arch}.tgz"
-            actual=$(jq -r --arg arch "$arch" '.Tarballs[$arch] // empty' "$latest_json")
-            [ "$actual" = "$expected" ] || {
-              printf 'unexpected tarball for %s: %s\n' "$arch" "$actual" >&2
-              exit 1
-            }
-          done
+            version=$(
+              tr -d '\n\r' < "$latest_json" |
+                sed -n 's/.*"TarballsVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
+            )
+            [ -n "$version" ]
 
-          tarball="tailscale_${version}_amd64.tgz"
-          archive="$work/$tarball"
-          checksum="$work/$tarball.sha256"
-
-          curl -fsSL "$pkgs_base/$tarball" -o "$archive"
-          curl -fsSL "$pkgs_base/$tarball.sha256" -o "$checksum"
-
-          expected=$(sed -n '1{s/[[:space:]].*$//;p;}' "$checksum")
-          actual=$(sha256sum "$archive" | sed 's/[[:space:]].*$//')
-
-          [ "${#expected}" -eq 64 ]
-          [ "$actual" = "$expected" ]
-
-          extract="$work/extract"
-          mkdir -p "$extract"
-          tar -xzf "$archive" --strip-components=1 -C "$extract"
-
-          test -x "$extract/tailscale"
-          test -x "$extract/tailscaled"
-
-          help=$("$extract/tailscaled" --help 2>&1 || true)
-          for flag in cleanup port socket socks5-server statedir tun; do
-            printf '%s\n' "$help" |
-              grep -Eq "^[[:space:]]*-${flag}([[:space:]=]|$)" || {
-                printf 'tailscaled flag not found: --%s\n' "$flag" >&2
+            for arch in 386 amd64 arm arm64 mips mipsle mips64 mips64le riscv64; do
+              expected="tailscale_${version}_${arch}.tgz"
+              actual=$(jq -r --arg arch "$arch" '.Tarballs[$arch] // empty' "$latest_json")
+              [ "$actual" = "$expected" ] || {
+                printf 'unexpected tarball for %s on %s: %s\n' "$arch" "$track" "$actual" >&2
                 exit 1
               }
-          done
+            done
 
-          "$extract/tailscale" --socket="$work/tailscaled.sock" --help >/dev/null 2>&1
-          "$extract/tailscale" wait --help >/dev/null 2>&1
+            tarball="tailscale_${version}_amd64.tgz"
+            archive="$work/$tarball"
+            checksum="$work/$tarball.sha256"
+
+            curl -fsSL "$pkgs_base/$tarball" -o "$archive"
+            curl -fsSL "$pkgs_base/$tarball.sha256" -o "$checksum"
+
+            expected=$(sed -n '1{s/[[:space:]].*$//;p;}' "$checksum")
+            actual=$(sha256sum "$archive" | sed 's/[[:space:]].*$//')
+
+            [ "${#expected}" -eq 64 ]
+            [ "$actual" = "$expected" ]
+
+            extract="$work/extract"
+            mkdir -p "$extract"
+            tar -xzf "$archive" --strip-components=1 -C "$extract"
+
+            test -x "$extract/tailscale"
+            test -x "$extract/tailscaled"
+
+            help=$("$extract/tailscaled" --help 2>&1 || true)
+            for flag in cleanup port socket socks5-server statedir tun; do
+              printf '%s\n' "$help" |
+                grep -Eq "^[[:space:]]*-${flag}([[:space:]=]|$)" || {
+                  printf 'tailscaled flag not found on %s: --%s\n' "$track" "$flag" >&2
+                  exit 1
+                }
+            done
+
+            "$extract/tailscale" --socket="$work/tailscaled.sock" --help >/dev/null 2>&1
+            "$extract/tailscale" wait --help >/dev/null 2>&1
+          }
+
+          check_track stable
+          check_track unstable
 
       - name: Check upstream systemd references
         run: |
