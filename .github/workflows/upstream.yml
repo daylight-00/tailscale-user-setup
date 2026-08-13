@@ -1,0 +1,93 @@
+name: Upstream
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check Tailscale package contract
+        run: |
+          set -eu
+
+          pkgs_base="https://pkgs.tailscale.com/stable"
+          work="$RUNNER_TEMP/tailscale-package"
+          mkdir -p "$work"
+
+          latest_json="$work/latest.json"
+          curl -fsSL "$pkgs_base/?mode=json&os=linux" -o "$latest_json"
+
+          version=$(
+            tr -d '\n\r' < "$latest_json" |
+              sed -n 's/.*"TarballsVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
+          )
+          [ -n "$version" ]
+
+          for arch in 386 amd64 arm arm64 mips mipsle mips64 mips64le riscv64; do
+            expected="tailscale_${version}_${arch}.tgz"
+            actual=$(jq -r --arg arch "$arch" '.Tarballs[$arch] // empty' "$latest_json")
+            [ "$actual" = "$expected" ] || {
+              printf 'unexpected tarball for %s: %s\n' "$arch" "$actual" >&2
+              exit 1
+            }
+          done
+
+          tarball="tailscale_${version}_amd64.tgz"
+          archive="$work/$tarball"
+          checksum="$work/$tarball.sha256"
+
+          curl -fsSL "$pkgs_base/$tarball" -o "$archive"
+          curl -fsSL "$pkgs_base/$tarball.sha256" -o "$checksum"
+
+          expected=$(sed -n '1{s/[[:space:]].*$//;p;}' "$checksum")
+          actual=$(sha256sum "$archive" | sed 's/[[:space:]].*$//')
+
+          [ "${#expected}" -eq 64 ]
+          [ "$actual" = "$expected" ]
+
+          extract="$work/extract"
+          mkdir -p "$extract"
+          tar -xzf "$archive" --strip-components=1 -C "$extract"
+
+          test -x "$extract/tailscale"
+          test -x "$extract/tailscaled"
+
+          help=$("$extract/tailscaled" --help 2>&1 || true)
+          for flag in cleanup port socket statedir tun; do
+            printf '%s\n' "$help" |
+              grep -Eq "^[[:space:]]*-${flag}([[:space:]=]|$)" || {
+                printf 'tailscaled flag not found: --%s\n' "$flag" >&2
+                exit 1
+              }
+          done
+
+          "$extract/tailscale" wait --help >/dev/null 2>&1
+
+      - name: Check upstream systemd references
+        run: |
+          set -eu
+
+          reviewed=$(cat .github/tailscale-upstream-ref)
+          upstream="$RUNNER_TEMP/tailscale-upstream"
+
+          git init -q "$upstream"
+          git -C "$upstream" remote add origin https://github.com/tailscale/tailscale.git
+          git -C "$upstream" fetch -q --depth=1 origin main
+          latest=$(git -C "$upstream" rev-parse FETCH_HEAD)
+          git -C "$upstream" fetch -q --depth=1 origin "$reviewed"
+
+          git -C "$upstream" diff --exit-code "$reviewed" "$latest" -- \
+            cmd/tailscaled/tailscaled.service \
+            cmd/tailscaled/tailscaled.defaults \
+            cmd/tailscaled/tailscale-wait-online.service \
+            cmd/tailscaled/tailscale-online.target

@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check shell syntax
+        run: |
+          sh -n install.sh
+          sh -n bin/tailscale
+
+      - name: Run ShellCheck
+        run: shellcheck -s sh install.sh bin/tailscale
+
+      - name: Verify systemd units
+        run: |
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/runtime"
+          mkdir -p \
+            "$XDG_RUNTIME_DIR" \
+            "$HOME/.local/share/tailscale" \
+            "$HOME/.local/bin" \
+            "$HOME/.config/tailscale"
+
+          ln -s /usr/bin/true "$HOME/.local/share/tailscale/tailscaled"
+          ln -s /usr/bin/true "$HOME/.local/bin/tailscale"
+          cp systemd/tailscaled.defaults "$HOME/.config/tailscale/tailscaled.defaults"
+
+          systemd-analyze --user verify \
+            systemd/tailscaled.service \
+            systemd/tailscale-wait-online.service \
+            systemd/tailscale-online.target
