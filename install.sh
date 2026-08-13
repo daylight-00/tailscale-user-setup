@@ -101,7 +101,15 @@ find_local_repo() {
 
     case "$0" in
         */*)
-            script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd || true)
+            if script_dir=$(
+                CDPATH=
+                cd -- "$(dirname -- "$0")" 2>/dev/null || exit 1
+                pwd
+            ); then
+                :
+            else
+                script_dir=""
+            fi
             if [ -n "$script_dir" ] &&
                [ -f "$script_dir/systemd/tailscaled.service" ]; then
                 LOCAL_REPO=$script_dir
@@ -207,16 +215,21 @@ install_setup_files() {
 }
 
 check_path() {
+    TAILSCALE_ON_PATH=0
     resolved=$(command -v tailscale 2>/dev/null || true)
-    [ "$resolved" = "$BIN_DIR/tailscale" ] && return
+
+    if [ "$resolved" = "$BIN_DIR/tailscale" ]; then
+        TAILSCALE_ON_PATH=1
+        return
+    fi
 
     case ":${PATH:-}:" in
         *:"$BIN_DIR":*) ;;
-        *) warn "~/.local/bin is not on PATH; add it before using tailscale" ;;
+        *) warn "$BIN_DIR is not on PATH; add it before using tailscale" ;;
     esac
 
     if [ -n "$resolved" ]; then
-        warn "tailscale currently resolves to $resolved instead of ~/.local/bin/tailscale"
+        warn "tailscale currently resolves to $resolved instead of $BIN_DIR/tailscale"
     fi
 }
 
@@ -310,13 +323,18 @@ main() {
 
     if [ "$LINGER_HINT" = 1 ]; then
         say ""
+        # shellcheck disable=SC2016
         say 'Tip: run `loginctl enable-linger "$USER"` to keep Tailscale running after logout.'
     fi
 
     say ""
-    say "Installation complete! Log in to start using Tailscale by running:"
-    say ""
-    say "tailscale up"
+    if [ "$TAILSCALE_ON_PATH" = 1 ]; then
+        say "Installation complete! Log in to start using Tailscale by running:"
+        say ""
+        say "tailscale up"
+    else
+        say "Installation complete!"
+    fi
 }
 
 # Keep execution at the bottom so a truncated curl | sh download cannot execute
