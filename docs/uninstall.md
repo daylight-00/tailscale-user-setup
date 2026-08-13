@@ -25,6 +25,8 @@ rm -f \
 systemctl --user daemon-reload
 ```
 
+In a shared-home setup, reload each active participating user manager after removing the shared units.
+
 If you configured a shared home directory, also remove its drop-in after all participating hosts are stopped:
 
 ```sh
