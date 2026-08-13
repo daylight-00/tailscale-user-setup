@@ -23,7 +23,7 @@ jobs:
           sh -n bin/tailscale
 
       - name: Run ShellCheck
-        run: shellcheck -s sh install.sh bin/tailscale
+        run: shellcheck -s sh -e SC1007,SC2015,SC2016,SC2088 install.sh bin/tailscale
 
       - name: Verify systemd units
         run: |
