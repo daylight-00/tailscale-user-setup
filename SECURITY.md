@@ -4,7 +4,7 @@
 
 If you believe you have found a security vulnerability in Tailscale User Setup, please do not disclose exploit details in a public issue.
 
-Use GitHub's private vulnerability reporting for this repository when available. If private reporting is unavailable, open a minimal public issue requesting a private contact channel without including sensitive technical details.
+Use GitHub's private vulnerability reporting for this repository. If private reporting is unavailable, open a minimal public issue requesting a private contact channel without including sensitive technical details.
 
 The maintainer intends to review and address confirmed vulnerabilities promptly.
 
