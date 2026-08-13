@@ -162,7 +162,13 @@ The wait service executes:
 tailscale wait
 ```
 
-through the per-user CLI wrapper. A downstream user service that requires Tailscale to be ready can order itself after `tailscale-online.target`.
+through the per-user CLI wrapper. A downstream user service that requires Tailscale to be ready should pull in the target and order itself after it:
+
+```ini
+[Unit]
+Wants=tailscale-online.target
+After=tailscale-online.target
+```
 
 In userspace networking mode, Tailscale documents that `tailscale wait` waits for `tailscaled` to reach the `Running` state because there is no physical Tailscale network interface. Refer to the [`tailscale wait` CLI reference](https://tailscale.com/docs/reference/tailscale-cli#wait) for the upstream behavior.
 
