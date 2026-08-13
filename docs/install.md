@@ -131,6 +131,8 @@ chmod 0700 \
   "$HOME/.local/state/tailscale/$(hostname)"
 ```
 
+Repeat these commands on each participating host before starting its user service.
+
 For a new setup, run the installer after creating the drop-in. For an existing setup, reload and restart the user service:
 
 ```sh
@@ -140,7 +142,7 @@ systemctl --user restart tailscaled.service
 
 systemd expands `%H` to the current hostname, so each host uses a separate state directory under `~/.local/state/tailscale/`. The runtime socket is already host-local through the systemd user runtime directory.
 
-The installer manages the base `tailscaled.service` file but leaves service drop-ins in place, so the shared-home configuration persists across updates. The installed binaries, configuration, and base units remain shared; after updating them, reload and restart the user service on each active host.
+The installer manages the base `tailscaled.service` file but leaves service drop-ins in place, so the shared-home configuration persists across updates. The installed binaries, configuration, and base units remain shared; after installing or updating the shared files, reload and restart the user service on each active host.
 
 ## Configure a SOCKS5 proxy
 
